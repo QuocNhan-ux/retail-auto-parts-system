@@ -20,7 +20,7 @@
                 <li><a id="nav-cart" href="/cart/" style="background-color: #ff6600;">Cart (0)</a></li>
 
                 <!-- Sign in / Logout -->
-                <li><a id="nav-signin" href="{% url 'customer-login-page' %}">Sign in</a></li>
+                <li><a id="nav-signin" href="{% url 'customer-history-page' %}">Sign in</a></li>
                 <li><a id="nav-logout" href="#" style="display: none;">Logout</a></li>
             </ul>
         </div>
@@ -44,12 +44,26 @@
         const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
 
         /* Show "Hi, Name" + Logout */
-        if (name) {
+        const customerName = localStorage.getItem('customerName');
+        const customerId = localStorage.getItem('customerId');
+
+        // If logged in, show greeting and logout button
+        if (customerId) {
             if (signinLink) {
-                signinLink.textContent = `Hi, ${name}`;
+                signinLink.textContent = customerName ? `Hi, ${customerName}` : "Hi, Customer";
+                signinLink.href = "{% url 'customer-history-page' %}";
             }
             if (logoutLink) {
-                logoutLink.style.display = 'inline-block';
+                logoutLink.style.display = "inline-block";
+            }
+        } else {
+            // If NOT logged in
+            if (logoutLink) {
+                logoutLink.style.display = "none";
+            }
+            if (signinLink) {
+                signinLink.textContent = "Sign in";
+                signinLink.href = "{% url 'customer-login-page' %}";
             }
         }
 

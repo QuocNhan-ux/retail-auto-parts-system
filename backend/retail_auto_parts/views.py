@@ -15,6 +15,8 @@ def customer_login_page(request):
 def employee_login_page(request):
     return render(request, "employee/login.html")
 
+def customer_history_page(request):
+    return render(request, "customer/history.html")
 
 # CATALOG VIEW
 def catalog_view(request):
@@ -81,3 +83,11 @@ def catalog_view(request):
 
     # Uses frontend/catalog.html
     return render(request, "catalog.html", context)
+
+def customer_history_page(request):
+    """
+    Simple view that serves the customer order history template.
+    The page itself will use JavaScript + API to load the current
+    customer's past orders.
+    """
+    return render(request, "customer/history.html")

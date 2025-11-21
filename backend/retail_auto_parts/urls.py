@@ -35,6 +35,9 @@ urlpatterns = [
     # register cart page
     path('cart/', api_views.cart_page, name='cart-page'),
 
+    # customer's history page
+    path("customer/history/", views.customer_history_page, name="customer-history-page"),
+
     #API (DRF) endpoints
     path("api/", include("api.urls")),
 ]

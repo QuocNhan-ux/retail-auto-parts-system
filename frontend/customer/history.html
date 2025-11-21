@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Your Order History - Autoparts System{% endblock %}
+
+{% block content %}
+<style>
+    /* Reuse cart-style formatting for consistency */
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .history-table .left  { text-align: left; }
+    .history-table .right { text-align: right; }
+    .history-table .center { text-align: center; }
+
+    .history-page h1 {
+        margin-bottom: 0.5rem;
+    }
+
+    .order-items {
+        font-size: 0.9rem;
+        color: #444;
+    }
+
+    .order-items ul {
+        margin: 0.25rem 0 0.75rem 1.25rem;
+        padding: 0;
+    }
+</style>
+
+<div class="history-page">
+    <h1>Your Order History</h1>
+    <p id="history-loading">Loading your orders...</p>
+    <p id="no-orders-message" style="display:none;">You don’t have any past orders yet.</p>
+
+    <table id="orders-table" class="history-table" style="display:none;">
+        <thead>
+            <tr>
+                <th class="left">Order #</th>
+                <th class="left">Store</th>
+                <th class="center">Date</th>
+                <th class="center">Status</th>
+                <th class="right">Total</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+(function () {
+    // We assume you stored this at login time
+    const customerId = localStorage.getItem('customerId');
+
+    // If not logged in, send to login page
+    if (!customerId) {
+        window.location.href = "{% url 'customer-login-page' %}";
+        return;
+    }
+
+    const table = document.getElementById('orders-table');
+    const tbody = table.querySelector('tbody');
+    const loadingEl = document.getElementById('history-loading');
+    const noOrdersEl = document.getElementById('no-orders-message');
+
+    async function loadHistory() {
+        try {
+            // Uses CustomerViewSet.order_history (detail=True action):
+            // /api/customers/<id>/order_history/
+            const res = await fetch(`/api/customers/${customerId}/order_history/`);
+            if (!res.ok) throw new Error('Failed to load history');
+
+            const orders = await res.json();
+            renderOrders(orders);
+        } catch (err) {
+            console.error(err);
+            loadingEl.textContent = 'Could not load your order history. Please try again later.';
+        }
+    }
+
+    function renderOrders(orders) {
+        loadingEl.style.display = 'none';
+        tbody.innerHTML = '';
+
+        if (!orders || orders.length === 0) {
+            noOrdersEl.style.display = 'block';
+            table.style.display = 'none';
+            return;
+        }
+
+        noOrdersEl.style.display = 'none';
+        table.style.display = 'table';
+
+        orders.forEach(order => {
+            const tr = document.createElement('tr');
+            const orderTotal = Number(order.total_amount || 0).toFixed(2);
+            const dateStr = (order.order_date || '').slice(0, 10); // YYYY-MM-DD
+
+            tr.innerHTML = `
+                <td class="left">#${order.order_id}</td>
+                <td class="left">${order.store_name || ''}</td>
+                <td class="center">${dateStr}</td>
+                <td class="center">${order.status}</td>
+                <td class="right">$${orderTotal}</td>
+            `;
+            tbody.appendChild(tr);
+
+            // Optional: show line items under each order
+            if (order.items && order.items.length > 0) {
+                const detailsTr = document.createElement('tr');
+                const itemsHtml = order.items.map(it => {
+                    const lineTotal = (Number(it.unit_price || 0) * Number(it.quantity || 0)).toFixed(2);
+                    return `<li>${it.part_name || it.part} — Qty ${it.quantity} @ $${Number(it.unit_price || 0).toFixed(2)} (Line: $${lineTotal})</li>`;
+                }).join('');
+
+                detailsTr.innerHTML = `
+                    <td class="order-items" colspan="5">
+                        <strong>Items:</strong>
+                        <ul>${itemsHtml}</ul>
+                    </td>
+                `;
+                tbody.appendChild(detailsTr);
+            }
+        });
+    }
+
+    loadHistory();
+})();
+</script>
+{% endblock %}
+
+
+
+
+
+
