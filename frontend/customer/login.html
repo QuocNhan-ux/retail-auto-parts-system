@@ -45,7 +45,17 @@ document.getElementById('customer-login-form').addEventListener('submit', async 
         const data = await response.json();
 
         if (response.ok && data.success) {
+            // Save who is logged in (for later use)
+            localStorage.setItem('customerId', data.customer_id);
+            localStorage.setItem('customerName', data.full_name);
+
             message.textContent = `Welcome, ${data.full_name}! (Customer #${data.customer_id})`;
+
+            // Go to home page (or wherever you want)
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 700);
+
         } else {
             message.textContent = data.error || 'Login failed. Please try again.';
         }

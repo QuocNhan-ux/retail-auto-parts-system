@@ -45,6 +45,12 @@ class Customer(models.Model):
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
     
+    def save(self, *args, **kwargs):
+        # If password is not hashed yet (plain text), hash it
+        if self.password and not self.password.startswith("pbkdf2_"):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.full_name} ({self.username})"
 
@@ -70,6 +76,12 @@ class Employee(models.Model):
     
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
+    
+    def save(self, *args, **kwargs):
+        # if password is not hashed yet, hash it
+        if self.password and not self.password.startswith("pbkdf2_"):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.full_name} - {self.role}"
