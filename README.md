@@ -14,3 +14,21 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
    ```bash
    git clone <your-repo-url>
    cd retail-auto-parts-system-main/backend
+
+2. Create a Python virtual enviroment
+    - python3 -m venv .venv
+    
+    For MacOS/Linux:
+    - source .venv/bin/activate
+
+    For Windows (Powershell)
+    - .venv/Scripts/Activate.ps1
+
+3. Install required packages
+    ```bash
+    pip install -r -requirements.txt
+
+4. Apply Database Migrations
+    ```bash
+    python3 managae.py migrate
+
