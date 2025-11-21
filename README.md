@@ -31,22 +31,21 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
     ```
 
 3. Install required packages
+
     ```bash
     pip install -r -requirements.txt
     ```
 
 4. Apply Database Migrations and Deploy
+
     ```bash
     python3 managae.py migrate
-    ```
-    
-Create Administrator Access and Deploy:
-    ```bash
     python3 manage.py createsuperuser
     python3 manage.py runserver
     ```
 
-5. Access the App
+5. Access the App:
+
 Home Page:
 http://127.0.0.1:8000/
 
