@@ -18,6 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+from api import views as api_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,6 +27,9 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("customer/login/", views.customer_login_page, name="customer-login-page"),
     path("employee/login/", views.employee_login_page, name="employee-login-page"),
+
+    # register cart page
+    path('cart/', api_views.cart_page, name='cart-page'),
 
     #API (DRF) endpoints
     path("api/", include("api.urls")),

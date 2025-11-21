@@ -12,6 +12,7 @@ router.register(r'purchase-orders', views.PurchaseOrderViewSet, basename='purcha
 router.register(r'customer-orders', views.CustomerOrderViewSet, basename='customerorder')
 
 urlpatterns = [
+    
     # Include router URLs
     path('', include(router.urls)),
     
