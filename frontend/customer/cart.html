@@ -3,6 +3,32 @@
 {% block title %}Your Cart - Autoparts System{% endblock %}
 
 {% block content %}
+<style>
+    /* Cart table alignment spacing */
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .cart-table th,
+    .cart-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .cart-table .left {
+        text-align: left;
+    }
+
+    .cart-table .right {
+        text-align: right;
+    }
+
+    .cart-table .center {
+        text-align: center;
+    }
+</style>
+
 <div class="cart-page">
     <h1>Your Cart</h1>
 
@@ -10,21 +36,21 @@
     <p id="cart-empty-message" style="display:none;">Your cart is empty.</p>
 
     <!-- Cart table -->
-    <table id="cart-table" class="cart-table" style="width:100%; border-collapse:collapse;">
+    <table id="cart-table" class="cart-table">
         <thead>
             <tr>
-                <th style="text-align:left;">Item</th>
-                <th>Price</th>
-                <th>Qty</th>
-                <th>Line Total</th>
+                <th class="left">Item</th>
+                <th class="right">Price</th>
+                <th class="center">Qty</th>
+                <th class="right">Line Total</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="cart-table-body"></tbody>
         <tfoot>
             <tr>
-                <td colspan="3" style="text-align:right; font-weight:bold;">Total:</td>
-                <td id="cart-total">$0.00</td>
+                <td colspan="3" class="right" style="font-weight:bold;">Total:</td>
+                <td id="cart-total" class="right">$0.00</td>
                 <td></td>
             </tr>
         </tfoot>
@@ -90,11 +116,11 @@
         data.items.forEach(item => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${item.name}</td>
-                <td>$${item.unit_price.toFixed(2)}</td>
-                <td>${item.quantity}</td>
-                <td>$${item.line_total.toFixed(2)}</td>
-                <td>
+                <td class="left">${item.name}</td>
+                <td class="right">$${item.unit_price.toFixed(2)}</td>
+                <td class="center">${item.quantity}</td>
+                <td class="right">$${item.line_total.toFixed(2)}</td>
+                <td class="center">
                     <button class="remove-item-btn" data-part-id="${item.part_id}">
                         Remove
                     </button>
