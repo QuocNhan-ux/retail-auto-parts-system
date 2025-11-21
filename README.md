@@ -39,7 +39,8 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
     ```bash
     python3 managae.py migrate
     ```
-Create Administrator Access:
+    
+Create Administrator Access and Deploy:
     ```bash
     python3 manage.py createsuperuser
     python3 manage.py runserver
