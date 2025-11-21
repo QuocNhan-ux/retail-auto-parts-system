@@ -108,7 +108,22 @@ def search_parts(request):
     }
     return render(request, "search_results.html", context)
 
+def customer_history_page(request):
+    # Check if customer is logged in
+    customer_id = request.session.get("customer_id")
+    if not customer_id:
+        return redirect("customer_login_page")
 
+    # Load the logged-in customer's info
+    try:
+        customer = Customer.objects.get(pk=customer_id)
+    except Customer.DoesNotExist:
+        return redirect("customer_login_page")
+
+    # Render page with customer info
+    return render(request, "customer/history.html", {
+        "customer": customer
+    })
 
 
 

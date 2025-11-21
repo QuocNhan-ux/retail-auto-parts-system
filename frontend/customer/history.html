@@ -36,6 +36,19 @@
     }
 </style>
 
+<div class="customer-info-card">
+    <h2>Your Information</h2>
+
+    <p><strong>Name:</strong> {{ customer.full_name }}</p>
+    <p><strong>Username:</strong> {{ customer.username }}</p>
+    <p><strong>Email:</strong> {{ customer.customer_email }}</p>
+
+    {% if customer.phone %}
+        <p><strong>Phone:</strong> {{ customer.customer_phone }}</p>
+    {% endif %}
+</div>
+
+
 <div class="history-page">
     <h1>Your Order History</h1>
     <p id="history-loading">Loading your orders...</p>
