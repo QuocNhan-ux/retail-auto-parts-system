@@ -55,12 +55,15 @@ def customer_login(request):
                           status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Customer logout
 @api_view(['POST'])
 def customer_logout(request):
     """Log out customer and clear session"""
     request.session.flush()  # clears all session data and cookie
     return Response({'success': True})
 
+
+# Employee login
 @api_view(['POST'])
 def employee_login(request):
     """Employee authentication endpoint"""
@@ -72,6 +75,12 @@ def employee_login(request):
         try:
             employee = Employee.objects.get(username=username)
             if employee.check_password(password):
+                # ✅ store employee info in session
+                request.session['employee_id'] = employee.employee_id
+                request.session['employee_name'] = employee.full_name
+                request.session['employee_role'] = employee.role
+                request.session['store_id'] = employee.store_id
+
                 return Response({
                     'success': True,
                     'employee_id': employee.employee_id,
@@ -80,12 +89,25 @@ def employee_login(request):
                     'store_id': employee.store_id
                 })
             else:
-                return Response({'error': 'Invalid credentials'}, 
-                              status=status.HTTP_401_UNAUTHORIZED)
+                return Response(
+                    {'error': 'Invalid credentials'}, 
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
         except Employee.DoesNotExist:
-            return Response({'error': 'Invalid credentials'}, 
-                          status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Invalid credentials'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Employee logout
+@api_view(['POST'])
+def employee_logout(request):
+    """Log out employee and clear employee-related session data"""
+    for key in ['employee_id', 'employee_name', 'employee_role', 'store_id']:
+        request.session.pop(key, None)
+    request.session.modified = True
+    return Response({'success': True})
 
 
 # Customer ViewSet

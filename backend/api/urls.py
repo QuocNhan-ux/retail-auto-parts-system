@@ -19,14 +19,15 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/customer/login/', views.customer_login, name='customer-login'),
     path('auth/employee/login/', views.employee_login, name='employee-login'),
-    
+
+    path('auth/customer/login/', views.customer_login, name='customer-login-api'),
+    path('auth/customer/logout/', views.customer_logout, name='customer-logout-api'),
+
     # Report endpoints
     path('reports/daily-sales/', views.daily_sales_report, name='daily-sales-report'),
     path('reports/inventory/', views.inventory_report, name='inventory-report'),
     path('reports/employee-performance/', views.employee_performance_report, name='employee-performance-report'),
 
-    path('auth/customer/login/', views.customer_login, name='customer-login-api'),
-    path('auth/customer/logout/', views.customer_logout, name='customer-logout-api'),
 
     path('cart/add/', views.cart_add, name='cart-add-api'),
     path('cart/summary/', views.cart_summary, name='cart-summary-api'),

@@ -32,6 +32,8 @@ urlpatterns = [
     path('catalog/', views.catalog_view, name='catalog'),
     path("catalog/<slug:category_slug>/", views.catalog_view, name="catalog-category"),
 
+    path('search/', views.search_parts, name='search_parts'),
+
     # register cart page
     path('cart/', api_views.cart_page, name='cart-page'),
 

@@ -1,6 +1,7 @@
 # backend/retail_auto_parts/views.py
 from django.shortcuts import render, redirect
 from api.models import AutoPart, Customer 
+from django.db.models import Q
 
 def home(request):
     # grab 6 random featured products from database
@@ -91,3 +92,29 @@ def customer_history_page(request):
     customer's past orders.
     """
     return render(request, "customer/history.html")
+
+def search_parts(request):
+    query = request.GET.get('q', '').strip()
+    parts = AutoPart.objects.none()
+
+    if query:
+        parts = AutoPart.objects.filter(
+            Q(name__icontains=query) | Q(sku__icontains=query)
+        ).order_by('name')
+
+    context = {
+        'query': query,
+        'parts': parts,
+    }
+    return render(request, "search_results.html", context)
+
+
+
+
+
+
+
+
+
+
+
