@@ -18,15 +18,14 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 2. Create a Python virtual enviroment
 
     ```bash
-    - python3 -m venv .venv
+    python3 -m venv .venv
     
 To activate it for MacOS/Linux:
-    ```bash
-    - source .venv/bin/activate
+    source .venv/bin/activate
 
 To activate it for Windows (Powershell):
     ```bash
-    - .venv/Scripts/Activate.ps1
+    .venv/Scripts/Activate.ps1
 
 3. Install required packages
     ```bash
@@ -37,7 +36,7 @@ To activate it for Windows (Powershell):
     python3 managae.py migrate
 
 Create Administrator Access:
-    ```bash
+    bash
     python3 manage.py createsuperuser
     python3 manage.py runserver
 
