@@ -5,22 +5,25 @@
 {% block content %}
 <div class="cart-page">
     <h1>Your Cart</h1>
-    <p id="cart-message"></p>
 
-    <table id="cart-table" class="cart-table" style="width: 100%; border-collapse: collapse; display: none;">
+    <!-- Empty message -->
+    <p id="cart-empty-message" style="display:none;">Your cart is empty.</p>
+
+    <!-- Cart table -->
+    <table id="cart-table" class="cart-table" style="width:100%; border-collapse:collapse;">
         <thead>
             <tr>
-                <th style="text-align: left;">Item</th>
+                <th style="text-align:left;">Item</th>
                 <th>Price</th>
                 <th>Qty</th>
                 <th>Line Total</th>
                 <th></th>
             </tr>
         </thead>
-        <tbody id="cart-body"></tbody>
+        <tbody id="cart-table-body"></tbody>
         <tfoot>
             <tr>
-                <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                <td colspan="3" style="text-align:right; font-weight:bold;">Total:</td>
                 <td id="cart-total">$0.00</td>
                 <td></td>
             </tr>
@@ -29,24 +32,27 @@
 
     <hr>
 
+    <!-- Checkout Section -->
     <h2>Checkout</h2>
-    <form id="checkout-form">
+    <form id="checkout-form" onsubmit="return false;">
         <label>
-            Payment Method
-            <select name="payment_method">
+            Payment Method:
+            <select id="payment-method">
                 <option value="CREDIT_CARD">Credit Card</option>
                 <option value="DEBIT_CARD">Debit Card</option>
                 <option value="PAYPAL">PayPal</option>
             </select>
         </label>
         <br>
+
         <label>
-            Card Last 4 Digits
-            <input type="text" name="card_last4" maxlength="4" />
+            Card Last 4 Digits:
+            <input id="card-last4" type="text" maxlength="4" />
         </label>
         <br><br>
-        <button type="submit">Place Order</button>
-        <button type="button" id="btn-clear-cart">Clear Cart</button>
+
+        <button id="place-order-btn" type="button">Place Order</button>
+        <button id="clear-cart-btn" type="button">Clear Cart</button>
     </form>
 </div>
 
@@ -54,71 +60,68 @@
 (function () {
     const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ""])[1];
 
-    const cartTable = document.getElementById("cart-table");
-    const cartBody = document.getElementById("cart-body");
+    const cartTableBody = document.getElementById("cart-table-body");
     const cartTotalEl = document.getElementById("cart-total");
-    const cartMessage = document.getElementById("cart-message");
+    const emptyMessageEl = document.getElementById("cart-empty-message");
+    const placeOrderBtn = document.getElementById("place-order-btn");
+    const clearCartBtn = document.getElementById("clear-cart-btn");
     const cartLink = document.getElementById("nav-cart");
+    const paymentMethodSelect = document.getElementById("payment-method");
+    const cardLast4Input = document.getElementById("card-last4");
 
-    function updateNav(count) {
+    function updateCartNav(count) {
         if (cartLink && typeof count === "number") {
             cartLink.textContent = `Cart (${count})`;
         }
     }
 
     function renderCart(data) {
-        const items = data.items || [];
-        const count = data.cart_count || 0;
-        const total = data.total || 0;
+        cartTableBody.innerHTML = "";
 
-        updateNav(count);
-
-        if (!items.length) {
-            cartTable.style.display = "none";
-            cartMessage.textContent = "Your cart is empty.";
+        if (!data.items || data.items.length === 0) {
+            emptyMessageEl.style.display = "block";
             cartTotalEl.textContent = "$0.00";
+            updateCartNav(0);
             return;
         }
 
-        cartTable.style.display = "table";
-        cartMessage.textContent = "";
+        emptyMessageEl.style.display = "none";
 
-        cartBody.innerHTML = "";
-        items.forEach(item => {
+        data.items.forEach(item => {
             const tr = document.createElement("tr");
-
             tr.innerHTML = `
                 <td>${item.name}</td>
-                <td style="text-align: center;">$${item.unit_price.toFixed(2)}</td>
-                <td style="text-align: center;">${item.quantity}</td>
-                <td style="text-align: center;">$${item.line_total.toFixed(2)}</td>
-                <td style="text-align: center;">
-                    <button type="button" class="btn-remove-item" data-part-id="${item.part_id}">
+                <td>$${item.unit_price.toFixed(2)}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.line_total.toFixed(2)}</td>
+                <td>
+                    <button class="remove-item-btn" data-part-id="${item.part_id}">
                         Remove
                     </button>
                 </td>
             `;
-
-            cartBody.appendChild(tr);
+            cartTableBody.appendChild(tr);
         });
 
-        cartTotalEl.textContent = `$${total.toFixed(2)}`;
+        cartTotalEl.textContent = `$${data.total.toFixed(2)}`;
+        updateCartNav(data.cart_count);
     }
 
     async function loadCart() {
         try {
             const res = await fetch("/api/cart/summary/");
-            if (!res.ok) throw new Error("bad status");
+            if (!res.ok) throw new Error("Failed to load cart");
             const data = await res.json();
             renderCart(data);
         } catch (err) {
             console.error(err);
-            cartMessage.textContent = "Could not load cart. Please try again.";
-            cartTable.style.display = "none";
+            emptyMessageEl.textContent = "Could not load cart. Please try again.";
+            emptyMessageEl.style.display = "block";
         }
     }
 
-    async function clearCart() {
+    // Clear cart button
+    clearCartBtn.addEventListener("click", async () => {
         try {
             const res = await fetch("/api/cart/clear/", {
                 method: "POST",
@@ -130,14 +133,21 @@
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                renderCart({ items: [], cart_count: 0, total: 0 });
+                renderCart({ items: [], total: 0, cart_count: 0 });
             }
         } catch (err) {
             console.error(err);
+            alert("Failed to clear cart.");
         }
-    }
+    });
 
-    async function removeItem(partId) {
+    // Remove single item
+    cartTableBody.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".remove-item-btn");
+        if (!btn) return;
+
+        const partId = btn.dataset.partId;
+
         try {
             const res = await fetch("/api/cart/remove/", {
                 method: "POST",
@@ -149,34 +159,54 @@
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                // reload cart from backend to get fresh totals
                 await loadCart();
             }
         } catch (err) {
             console.error(err);
-        }
-    }
-
-    document.addEventListener("click", (e) => {
-        if (e.target.classList.contains("btn-remove-item")) {
-            const partId = e.target.getAttribute("data-part-id");
-            removeItem(partId);
+            alert("Failed to remove item.");
         }
     });
 
-    document.getElementById("btn-clear-cart").addEventListener("click", (e) => {
-        e.preventDefault();
-        clearCart();
+    // Place Order
+    placeOrderBtn.addEventListener("click", async () => {
+        const method = paymentMethodSelect.value;
+        const last4 = (cardLast4Input.value || "").trim().slice(-4);
+
+        if (!last4 || last4.length < 4) {
+            alert("Please enter the last 4 digits of your card.");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/cart/checkout/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({
+                    payment_method: method,
+                    card_last_four_digit: last4
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                alert(`Order #${data.order_id} placed successfully! Total: $${data.total.toFixed(2)}`);
+                await loadCart();
+            } else {
+                alert(data.error || "Could not place order.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Network error while placing order.");
+        }
     });
 
-    document.getElementById("checkout-form").addEventListener("submit", (e) => {
-        e.preventDefault();
-        // You can plug this into your create_order API later.
-        alert("Checkout flow not fully wired yet, but cart + totals are working.");
-    });
-
-    // initial load
+    // Load cart on page load
     loadCart();
 })();
 </script>
+
 {% endblock %}

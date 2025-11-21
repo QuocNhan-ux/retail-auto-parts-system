@@ -493,22 +493,48 @@ def cart_add(request):
     if not part_id:
         return Response({"error": "part_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # quantity
     try:
         quantity = int(data.get("quantity", 1))
     except (TypeError, ValueError):
         quantity = 1
     quantity = max(1, quantity)
 
-    name = (data.get("name") or f"Item {part_id}").strip()
+    # Try to read name/price from request first
+    raw_name = (data.get("name") or "").strip()
+    raw_price = data.get("unit_price")
+
+    part_obj = None
+
+    # If we don't have a good name/price from the request, look up the AutoPart
+    if not raw_name or raw_price in (None, "", 0, "0", "0.0"):
+        try:
+            # numeric -> assume primary key
+            pk = int(part_id)
+            part_obj = AutoPart.objects.filter(pk=pk).first()
+        except ValueError:
+            # non-numeric -> assume SKU
+            part_obj = AutoPart.objects.filter(sku=part_id).first()
+
+        if part_obj:
+            if not raw_name:
+                raw_name = part_obj.name
+            if raw_price in (None, "", 0, "0", "0.0"):
+                raw_price = part_obj.unit_price  # Decimal is fine here
+
+    # Finalize name
+    name = raw_name or f"Item {part_id}"
+
+    # Finalize price as float for JSON
     try:
-        unit_price = float(data.get("unit_price", 0))
-    except (TypeError, ValueError):
-        unit_price = 0.0
+        unit_price = float(raw_price or 0)
+    except Exception:
+        unit_price = float(part_obj.unit_price) if part_obj else 0.0
 
     cart = _get_cart(request)
     item = cart.get(part_id, {"name": name, "unit_price": unit_price, "quantity": 0})
 
-    # always keep latest name/price from frontend
+    # Always keep latest name/price
     item["name"] = name
     item["unit_price"] = unit_price
     item["quantity"] = int(item.get("quantity", 0)) + quantity
@@ -578,3 +604,150 @@ def cart_page(request):
     if 'customer_id' not in request.session:
         return redirect('customer-login-page')
     return render(request, 'customer/cart.html')
+
+@api_view(["POST"])
+def cart_checkout(request):
+    """
+    Convert the current session cart into a CustomerOrder + Payment.
+    Expects JSON body:
+      {
+        "payment_method": "CREDIT_CARD" | "DEBIT_CARD" | "PAYPAL",
+        "card_last_four_digit": "1234"
+      }
+    """
+    # Must be logged in as a customer
+    customer_id = request.session.get("customer_id")
+    if not customer_id:
+        return Response(
+            {"error": "Login required"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Get cart from session
+    cart = _get_cart(request)
+    if not cart:
+        return Response(
+            {"error": "Cart is empty."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # For this project we assume a single store
+    store = Store.objects.first()
+    if not store:
+        return Response(
+            {"error": "No store configured in the system."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    line_items = []
+    total = Decimal("0.00")
+
+    # Turn session cart entries into concrete AutoPart line items
+    for part_key, item in cart.items():
+        part = None
+        key_str = str(part_key).strip()
+
+        # 1) Try primary key (integer)
+        try:
+            pk = int(key_str)
+            part = AutoPart.objects.filter(pk=pk).first()
+        except (TypeError, ValueError):
+            part = None
+
+        # 2) Try SKU
+        if not part:
+            part = AutoPart.objects.filter(sku=key_str).first()
+
+        # 3) As a last resort, try matching by name
+        if not part:
+            name = (item.get("name") or "").strip()
+            if name:
+                part = AutoPart.objects.filter(name__iexact=name).first()
+
+        # If we still can't resolve the part, skip this entry
+        if not part:
+            continue
+
+        # Quantity
+        try:
+            qty = int(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            qty = 0
+
+        if qty <= 0:
+            continue
+
+        # Unit price—prefer session value, fall back to DB value
+        price_raw = item.get("unit_price", part.unit_price)
+        try:
+            price = Decimal(str(price_raw))
+        except Exception:
+            price = part.unit_price
+
+        if price <= 0:
+            price = part.unit_price
+
+        line_total = price * qty
+        total += line_total
+
+        line_items.append((part, qty, price))
+
+    # If nothing usable, bail out
+    if not line_items:
+        return Response(
+            {"error": "No valid items in cart to place an order."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    payment_method = request.data.get("payment_method", "CREDIT_CARD")
+    card_last4 = (request.data.get("card_last_four_digit") or "")[-4:]
+
+    with transaction.atomic():
+        # Create the order
+        order = CustomerOrder.objects.create(
+            customer_id=customer_id,
+            store=store,
+            status="PENDING",
+        )
+
+        # Create order items
+        for part, qty, price in line_items:
+            OrderItem.objects.create(
+                order=order,
+                part=part,
+                quantity=qty,
+                unit_price=price,
+            )
+
+        # Payment record
+        Payment.objects.create(
+            order=order,
+            payment_method=payment_method,
+            amount=total,
+            card_last_four_digit=card_last4,
+            authentication_code=str(uuid.uuid4())[:12],
+        )
+
+        # Delivery record
+        Delivery.objects.create(
+            order=order,
+            tracking_number=f"TRK{order.order_id}{timezone.now().strftime('%Y%m%d%H%M')}",
+            delivery_status="PREPARING",
+        )
+
+        # Move order to PROCESSING
+        order.status = "PROCESSING"
+        order.save()
+
+    # Clear the session cart now that we've placed the order
+    request.session["cart"] = {}
+    request.session.modified = True
+
+    return Response(
+        {
+            "success": True,
+            "order_id": order.order_id,
+            "total": float(total),
+        },
+        status=status.HTTP_201_CREATED,
+    )
