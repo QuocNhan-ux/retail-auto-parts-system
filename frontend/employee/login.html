@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Login - Autoparts System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h1>Employee Login</h1>
+    <form id="employee-login-form">
+        <div class="form-group">
+            <label for="emp-username">Username</label>
+            <input id="emp-username" name="username" type="text" required>
+        </div>
+
+        <div class="form-group">
+            <label for="emp-password">Password</label>
+            <input id="emp-password" name="password" type="password" required>
+        </div>
+
+        <button type="submit">Sign In</button>
+    </form>
+
+    <div id="emp-login-message" class="message"></div>
+</div>
+
+<script>
+document.getElementById('employee-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const username = (document.getElementById('emp-username').value || '').trim();
+    const password = document.getElementById('emp-password').value;
+
+    const message = document.getElementById('emp-login-message');
+    message.textContent = 'Signing in...';
+
+    try {
+        const response = await fetch('/api/auth/employee/login/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1]
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            message.textContent = `Welcome, ${data.full_name}! Role: ${data.role}`;
+        } else {
+            message.textContent = data.error || 'Login failed. Please try again.';
+        }
+    } catch (err) {
+        console.error(err);
+        message.textContent = 'Unexpected error. Please try again later.';
+    }
+});
+</script>
+{% endblock %}

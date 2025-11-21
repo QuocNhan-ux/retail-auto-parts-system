@@ -16,8 +16,17 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from . import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+
+    # frontend  pages
+    path("", views.home, name="home"),
+    path("customer/login/", views.customer_login_page, name="customer-login-page"),
+    path("employee/login/", views.employee_login_page, name="employee-login-page"),
+
+    #API (DRF) endpoints
+    path("api/", include("api.urls")),
 ]
