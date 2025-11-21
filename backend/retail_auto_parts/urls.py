@@ -28,6 +28,8 @@ urlpatterns = [
     path("customer/login/", views.customer_login_page, name="customer-login-page"),
     path("employee/login/", views.employee_login_page, name="employee-login-page"),
 
+    # catalog page for shopping
+    path('catalog/', views.catalog_view, name='catalog'),
     # register cart page
     path('cart/', api_views.cart_page, name='cart-page'),
 

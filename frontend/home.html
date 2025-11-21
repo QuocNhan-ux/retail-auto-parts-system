@@ -15,131 +15,47 @@
 <div class="categories">
     <h2>Shop by Category</h2>
     <div class="category-grid">
-        <div class="category-card">
+        <a href="/catalog/?category=engine-parts" class="category-card">
             <h3>Engine Parts</h3>
             <p>Pistons, gaskets, filters & more</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=brakes" class="category-card">
             <h3>Brakes</h3>
             <p>Pads, rotors, calipers & lines</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=suspension" class="category-card">
             <h3>Suspension</h3>
             <p>Shocks, struts & control arms</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=electrical" class="category-card">
             <h3>Electrical</h3>
             <p>Batteries, alternators & starters</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=exhaust" class="category-card">
             <h3>Exhaust</h3>
             <p>Mufflers, pipes & catalytic converters</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=body-parts" class="category-card">
             <h3>Body Parts</h3>
             <p>Bumpers, fenders & mirrors</p>
-        </div>
+        </a>
     </div>
 </div>
 
 <div class="featured-products">
     <h2>Featured Products</h2>
     <div class="product-grid">
+        {% for product in featured_products %}
         <div class="product-card">
             <div class="product-image">[Image]</div>
-            <h3>Brake Pad Set</h3>
-            <p class="price">$49.99</p>
-            <button class="add-to-cart" data-part-id="AP-100245" data-quantity="1">Add to Cart</button>
+            <h3>{{ product.name }}</h3>
+            <p class="condition">{{ product.get_condition_display }}</p>
+            <p class="price">${{ product.unit_price }}</p>
+            <button class="add-to-cart" data-product-id="{{ product.part_id }}">Add to Cart</button>
         </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Oil Filter</h3>
-            <p class="price">$12.99</p>
-            <button class="add-to-cart" data-part-id="AP-200112" data-quantity="1">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Air Filter</h3>
-            <p class="price">$18.99</p>
-            <button class="add-to-cart" data-part-id="AP-200318" data-quantity="1">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Spark Plugs (Set of 4)</h3>
-            <p class="price">$24.99</p>
-            <button class="add-to-cart" data-part-id="AP-300457" data-quantity="1">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Battery</h3>
-            <p class="price">$259.99</p>
-            <button class="add-to-cart" data-part-id="AP-400982" data-quantity="1">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Wiper Blade</h3>
-            <p class="price">$26.99</p>
-            <button class="add-to-cart" data-part-id="AP-500721" data-quantity="1">Add to Cart</button>
-        </div>
+        {% empty %}
+        <p>No featured products available at this time.</p>
+        {% endfor %}
     </div>
 </div>
-<script>
-    (function () {
-        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ""])[1];
-        const cartLink = document.getElementById("nav-cart");
-    
-        function updateCartNav(count) {
-            if (cartLink && typeof count === "number") {
-                cartLink.textContent = `Cart (${count})`;
-            }
-        }
-    
-        async function addToCart(button) {
-            const card = button.closest(".product-card");
-            const partId = button.dataset.partId;
-            const quantity = parseInt(button.dataset.quantity || "1", 10);
-    
-            // Extract name + price from card
-            const name = card.querySelector("h3").textContent.trim();
-            const priceText = card.querySelector(".price").textContent.replace("$", "").trim();
-            const unitPrice = parseFloat(priceText) || 0;
-    
-            try {
-                const res = await fetch("/api/cart/add/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": csrftoken
-                    },
-                    body: JSON.stringify({
-                        part_id: partId,
-                        quantity: quantity,
-                        name: name,
-                        unit_price: unitPrice
-                    })
-                });
-    
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    alert("Added to cart!");
-                    updateCartNav(data.cart_count);
-                } else if (res.status === 401) {
-                    alert("Please sign in before adding items.");
-                    window.location.href = "{% url 'customer-login-page' %}";
-                } else {
-                    alert(data.error || "Could not add to cart.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Unexpected error adding to cart.");
-            }
-        }
-    
-        document.addEventListener("DOMContentLoaded", () => {
-            document.querySelectorAll(".add-to-cart").forEach(btn => {
-                btn.addEventListener("click", () => addToCart(btn));
-            });
-        });
-    })();
-    </script>
 {% endblock %}
