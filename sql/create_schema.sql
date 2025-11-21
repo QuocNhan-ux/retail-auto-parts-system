@@ -1,5 +1,4 @@
--- Retail Auto Parts System - PostgreSQL schema
--- This script creates all tables and constraints based on the Django models.
+-- Retail Auto Parts System: PostgreSQL schema
 
 DROP TABLE IF EXISTS returnitem CASCADE;
 DROP TABLE IF EXISTS delivery CASCADE;
