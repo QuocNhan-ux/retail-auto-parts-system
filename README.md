@@ -39,7 +39,7 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 4. Apply Database Migrations and Deploy
 
     ```bash
-    python3 managae.py migrate
+    python3 manage.py migrate
     python3 manage.py createsuperuser
     python3 manage.py runserver
     ```
