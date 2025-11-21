@@ -4,17 +4,23 @@
 
 {% block content %}
 <style>
-    /* Reuse cart-style formatting for consistency */
     .history-table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 1rem;
+        font-size: 0.98rem;
+        background: #fff;
     }
 
     .history-table th,
     .history-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid #ddd;
+        padding: 10px 14px;
+        border-bottom: 1px solid #e2e2e2;
+    }
+
+    .history-table thead th {
+        font-weight: 700;
+        border-bottom: 2px solid #ccc;
     }
 
     .history-table .left  { text-align: left; }
@@ -25,14 +31,33 @@
         margin-bottom: 0.5rem;
     }
 
-    .order-items {
-        font-size: 0.9rem;
-        color: #444;
+    /* Items table under each order */
+    .order-items-wrapper {
+        background: #fafafa;
+        padding: 10px 14px 14px;
+        border-top: 1px solid #e2e2e2;
     }
 
-    .order-items ul {
-        margin: 0.25rem 0 0.75rem 1.25rem;
-        padding: 0;
+    .order-items-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .order-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .order-items-table th,
+    .order-items-table td {
+        padding: 4px 6px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .order-items-table thead th {
+        font-weight: 600;
+        background: #f0f0f0;
     }
 </style>
 
@@ -126,20 +151,55 @@
             `;
             tbody.appendChild(tr);
 
-            // Optional: show line items under each order
+            // Items row (with SKU + condition)
             if (order.items && order.items.length > 0) {
                 const detailsTr = document.createElement('tr');
-                const itemsHtml = order.items.map(it => {
-                    const lineTotal = (Number(it.unit_price || 0) * Number(it.quantity || 0)).toFixed(2);
-                    return `<li>${it.part_name || it.part} — Qty ${it.quantity} @ $${Number(it.unit_price || 0).toFixed(2)} (Line: $${lineTotal})</li>`;
+
+                const itemsRows = order.items.map(it => {
+                    const qty = Number(it.quantity || 0);
+                    const unitPrice = Number(it.unit_price || 0);
+                    const lineTotal = (qty * unitPrice).toFixed(2);
+
+                    const sku = it.sku || it.part_sku || '';
+                    const condition = it.condition || it.part_condition || '';
+
+                    const partName = it.part_name || it.part || '';
+
+                    return `
+                        <tr>
+                            <td>${partName}</td>
+                            <td>${sku}</td>
+                            <td>${condition}</td>
+                            <td class="center">${qty}</td>
+                            <td class="right">$${unitPrice.toFixed(2)}</td>
+                            <td class="right">$${lineTotal}</td>
+                        </tr>
+                    `;
                 }).join('');
 
                 detailsTr.innerHTML = `
-                    <td class="order-items" colspan="5">
-                        <strong>Items:</strong>
-                        <ul>${itemsHtml}</ul>
+                    <td colspan="5">
+                        <div class="order-items-wrapper">
+                            <div class="order-items-title">Items:</div>
+                            <table class="order-items-table">
+                                <thead>
+                                    <tr>
+                                        <th class="left">Part</th>
+                                        <th class="left">SKU</th>
+                                        <th class="left">Condition</th>
+                                        <th class="center">Qty</th>
+                                        <th class="right">Unit Price</th>
+                                        <th class="right">Line Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsRows}
+                                </tbody>
+                            </table>
+                        </div>
                     </td>
                 `;
+
                 tbody.appendChild(detailsTr);
             }
         });
