@@ -48,6 +48,7 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
     python3 manage.py createsuperuser
     ```
     
+    Launch application
     ```bash
     python3 manage.py runserver
     ```
