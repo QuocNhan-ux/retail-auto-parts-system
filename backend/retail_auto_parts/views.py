@@ -2,7 +2,7 @@ from django.shortcuts import render
 from api.models import AutoPart
 
 def home(request):
-    # Get 6 random featured products from database
+    # grab 6 random featured products from database
     featured_products = AutoPart.objects.all().order_by('?')[:6]
     return render(request, "home.html", {
         'featured_products': featured_products

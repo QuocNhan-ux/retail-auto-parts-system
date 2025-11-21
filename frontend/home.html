@@ -58,48 +58,4 @@
         {% endfor %}
     </div>
 </div>
-<script>
-    (function () {
-        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
-        const cartLink = document.getElementById('nav-cart');
-    
-        function updateCartNav(count) {
-            if (cartLink && typeof count === 'number') {
-                cartLink.textContent = `Cart (${count})`;
-            }
-        }
-    
-        document.querySelectorAll('.add-to-cart').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const partId = btn.getAttribute('data-part-id');
-                const quantity = parseInt(btn.getAttribute('data-quantity') || '1', 10);
-    
-                try {
-                    const res = await fetch('/api/cart/add/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken,
-                        },
-                        body: JSON.stringify({ part_id: partId, quantity: quantity }),
-                    });
-    
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        alert('Added to cart!');
-                        updateCartNav(data.cart_count);
-                    } else if (res.status === 401) {
-                        alert('Please sign in before adding items to your cart.');
-                        window.location.href = "{% url 'customer-login-page' %}";
-                    } else {
-                        alert(data.error || 'Could not add to cart.');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('Unexpected error adding to cart.');
-                }
-            });
-        });
-    })();
-    </script>
 {% endblock %}

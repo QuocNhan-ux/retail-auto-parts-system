@@ -15,9 +15,6 @@
             <ul class="nav-links">
                 <li><a href="/" class="active">Home</a></li>
                 <li><a href="/catalog/">Catalog</a></li>
-                <li><a href="#cart" style="background-color: #ff6600;">Cart (0)</a></li>
-                <li><a href="#shop">Shop Parts</a></li>
-                <li><a href="#contact">Contact</a></li>
 
                 <!-- Updated cart link -->
                 <li><a id="nav-cart" href="/cart/" style="background-color: #ff6600;">Cart (0)</a></li>
@@ -44,6 +41,7 @@
         const signinLink = document.getElementById('nav-signin');
         const logoutLink = document.getElementById('nav-logout');
         const cartLink = document.getElementById('nav-cart');
+        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
 
         /* Show "Hi, Name" + Logout */
         if (name) {
@@ -55,17 +53,57 @@
             }
         }
 
+        /* Update Cart Nav function */
+        function updateCartNav(count) {
+            if (cartLink && typeof count === 'number') {
+                cartLink.textContent = `Cart (${count})`;
+            }
+        }
+
         /* Load Cart Count on startup */
         if (cartLink) {
             fetch('/api/cart/summary/')
                 .then(res => res.ok ? res.json() : Promise.reject())
                 .then(data => {
                     if (typeof data.cart_count === 'number') {
-                        cartLink.textContent = `Cart (${data.cart_count})`;
+                        updateCartNav(data.cart_count);
                     }
                 })
                 .catch(() => {});
         }
+
+        /* Add to Cart Handler*/
+        document.querySelectorAll('.add-to-cart').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const partId = btn.getAttribute('data-product-id') || btn.getAttribute('data-part-id');
+                const quantity = parseInt(btn.getAttribute('data-quantity') || '1', 10);
+
+                try {
+                    const res = await fetch('/api/cart/add/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken,
+                        },
+                        body: JSON.stringify({ part_id: partId, quantity: quantity }),
+                    });
+
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        alert('Added to cart!');
+                        updateCartNav(data.cart_count);
+                    } else if (res.status === 401) {
+                        alert('Please sign in before adding items to your cart.');
+                        window.location.href = "{% url 'customer-login-page' %}";
+                    } else {
+                        alert(data.error || 'Could not add to cart.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Unexpected error adding to cart.');
+                }
+            });
+        });
 
         /* Logout Handler */
         if (logoutLink) {
@@ -76,7 +114,7 @@
                     await fetch('/api/auth/customer/logout/', {
                         method: 'POST',
                         headers: {
-                            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1],
+                            'X-CSRFToken': csrftoken,
                             'Content-Type': 'application/json'
                         },
                         body: '{}'
