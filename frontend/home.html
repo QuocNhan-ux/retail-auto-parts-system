@@ -15,72 +15,47 @@
 <div class="categories">
     <h2>Shop by Category</h2>
     <div class="category-grid">
-        <div class="category-card">
+        <a href="/catalog/?category=engine-parts" class="category-card">
             <h3>Engine Parts</h3>
             <p>Pistons, gaskets, filters & more</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=brakes" class="category-card">
             <h3>Brakes</h3>
             <p>Pads, rotors, calipers & lines</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=suspension" class="category-card">
             <h3>Suspension</h3>
             <p>Shocks, struts & control arms</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=electrical" class="category-card">
             <h3>Electrical</h3>
             <p>Batteries, alternators & starters</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=exhaust" class="category-card">
             <h3>Exhaust</h3>
             <p>Mufflers, pipes & catalytic converters</p>
-        </div>
-        <div class="category-card">
+        </a>
+        <a href="/catalog/?category=body-parts" class="category-card">
             <h3>Body Parts</h3>
             <p>Bumpers, fenders & mirrors</p>
-        </div>
+        </a>
     </div>
 </div>
 
 <div class="featured-products">
     <h2>Featured Products</h2>
     <div class="product-grid">
+        {% for product in featured_products %}
         <div class="product-card">
             <div class="product-image">[Image]</div>
-            <h3>Brake Pad Set</h3>
-            <p class="price">$49.99</p>
-            <button class="add-to-cart">Add to Cart</button>
+            <h3>{{ product.name }}</h3>
+            <p class="condition">{{ product.get_condition_display }}</p>
+            <p class="price">${{ product.unit_price }}</p>
+            <button class="add-to-cart" data-product-id="{{ product.part_id }}">Add to Cart</button>
         </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Oil Filter</h3>
-            <p class="price">$12.99</p>
-            <button class="add-to-cart">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Air Filter</h3>
-            <p class="price">$18.99</p>
-            <button class="add-to-cart">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Spark Plugs (Set of 4)</h3>
-            <p class="price">$24.99</p>
-            <button class="add-to-cart">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Battery</h3>
-            <p class="price">$259.99</p>
-            <button class="add-to-cart">Add to Cart</button>
-        </div>
-        <div class="product-card">
-            <div class="product-image">[Image]</div>
-            <h3>Wiper Blade</h3>
-            <p class="price">$26.99</p>
-            <button class="add-to-cart">Add to Cart</button>
-        </div>
+        {% empty %}
+        <p>No featured products available at this time.</p>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

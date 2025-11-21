@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Catalog - Auto Parts{% endblock %}
+
+{% block content %}
+<div class="catalog-container">
+    <aside class="filter-sidebar">
+        <h3>Filter by Category</h3>
+        <ul class="filter-list">
+            <li><a href="/catalog/" class="{% if not selected_category %}active{% endif %}">All Parts</a></li>
+            <li><a href="/catalog/?category=engine-parts" class="{% if selected_category == 'engine-parts' %}active{% endif %}">Engine Parts</a></li>
+            <li><a href="/catalog/?category=brakes" class="{% if selected_category == 'brakes' %}active{% endif %}">Brakes</a></li>
+            <li><a href="/catalog/?category=suspension" class="{% if selected_category == 'suspension' %}active{% endif %}">Suspension</a></li>
+            <li><a href="/catalog/?category=electrical" class="{% if selected_category == 'electrical' %}active{% endif %}">Electrical</a></li>
+            <li><a href="/catalog/?category=exhaust" class="{% if selected_category == 'exhaust' %}active{% endif %}">Exhaust</a></li>
+            <li><a href="/catalog/?category=body-parts" class="{% if selected_category == 'body-parts' %}active{% endif %}">Body Parts</a></li>
+        </ul>
+
+        <h3>Filter by Condition</h3>
+        <ul class="filter-list">
+            <li><a href="/catalog/?category={{ selected_category }}" class="{% if not selected_condition %}active{% endif %}">All Conditions</a></li>
+            <li><a href="/catalog/?category={{ selected_category }}&condition=NEW" class="{% if selected_condition == 'NEW' %}active{% endif %}">New</a></li>
+            <li><a href="/catalog/?category={{ selected_category }}&condition=REBUILT" class="{% if selected_condition == 'REBUILT' %}active{% endif %}">Rebuilt</a></li>
+            <li><a href="/catalog/?category={{ selected_category }}&condition=USED" class="{% if selected_condition == 'USED' %}active{% endif %}">Used</a></li>
+        </ul>
+    </aside>
+
+    <main class="catalog-main">
+        <div class="catalog-header">
+            <h1>
+                {% if selected_category %}
+                    {{ category_display }}
+                {% else %}
+                    All Auto Parts
+                {% endif %}
+            </h1>
+            <p>{{ products|length }} product(s) found</p>
+        </div>
+
+        <div class="product-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <div class="product-image">[Image]</div>
+                <h3>{{ product.name }}</h3>
+                <p class="condition">{{ product.get_condition_display }}</p>
+                <p class="price">${{ product.unit_price }}</p>
+                <button class="add-to-cart" data-product-id="{{ product.part_id }}">Add to Cart</button>
+            </div>
+            {% empty %}
+            <p>No products found matching your filters.</p>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}

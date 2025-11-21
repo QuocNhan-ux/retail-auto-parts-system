@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category_name }} - Auto Parts{% endblock %}
+
+{% block content %}
+<div class="category-page">
+    <h1>{{ category_name }}</h1>
+</div>
+
+<div class="featured-products">
+    <div class="product-grid">
+        {% for product in products %}
+        <div class="product-card">
+            <div class="product-image">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                    [Image]
+                {% endif %}
+            </div>
+            <h3>{{ product.name }}</h3>
+            <p class="condition">{{ product.get_condition_display }}</p>
+            <p class="price">${{ product.unit_price }}</p>
+            <button class="add-to-cart" data-product-id="{{ product.part_id }}">Add to Cart</button>
+        </div>
+        {% empty %}
+        <p>No products found in this category.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

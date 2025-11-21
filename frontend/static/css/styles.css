@@ -129,6 +129,8 @@ main {
     text-align: center;
     border: 2px solid #ddd;
     cursor: pointer;
+    text-decoration: none;
+    display: block;
 }
 
 .category-card:hover {
@@ -189,6 +191,13 @@ main {
     margin: 0 0 10px 0;
 }
 
+.condition {
+    color: #666;
+    font-size: 14px;
+    margin: 5px 0;
+    font-style: italic;
+}
+
 .price {
     color: #ff6600;
     font-size: 20px;
@@ -235,6 +244,77 @@ main {
 .info-card p {
     color: #666;
     margin: 0;
+}
+
+/* Catalog page layout */
+.catalog-container {
+    display: flex;
+    gap: 30px;
+}
+
+.filter-sidebar {
+    width: 250px;
+    background-color: white;
+    padding: 20px;
+    height: fit-content;
+}
+
+.filter-sidebar h3 {
+    color: #333;
+    margin-top: 20px;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.filter-sidebar h3:first-child {
+    margin-top: 0;
+}
+
+.filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.filter-list li {
+    margin-bottom: 10px;
+}
+
+.filter-list a {
+    display: block;
+    padding: 10px;
+    color: #666;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+}
+
+.filter-list a:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.filter-list a.active {
+    border-left-color: #ff6600;
+    background-color: #fff5ee;
+    color: #ff6600;
+    font-weight: bold;
+}
+
+.catalog-main {
+    flex: 1;
+}
+
+.catalog-header {
+    margin-bottom: 30px;
+}
+
+.catalog-header h1 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.catalog-header p {
+    color: #666;
 }
 
 /* Footer */
