@@ -252,92 +252,106 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 class CustomerOrderViewSet(viewsets.ModelViewSet):
     queryset = CustomerOrder.objects.select_related('customer', 'store').prefetch_related('items').all()
     serializer_class = CustomerOrderSerializer
-    
+
     @action(detail=False, methods=['post'])
     def create_order(self, request):
         """Create new customer order with items and payment"""
-        serializer = CreateOrderSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        data = serializer.validated_data
-        
-        with transaction.atomic():
-            # Create order
-            order = CustomerOrder.objects.create(
-                customer_id=data['customer_id'],
-                store_id=data['store_id'],
-                status='PENDING'
-            )
-            
-            total_amount = 0
-            
-            # Create order items and update inventory
-            for item_data in data['items']:
-                part = AutoPart.objects.get(pk=item_data['part_id'])
-                
-                # Check and update inventory
-                try:
-                    inventory = Inventory.objects.get(
-                        store_id=data['store_id'],
-                        part=part
-                    )
-                    
-                    if inventory.quantity_on_hand < item_data['quantity']:
-                        return Response({
-                            'error': f'Insufficient stock for {part.name}. Available: {inventory.quantity_on_hand}'
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                    
-                    inventory.quantity_on_hand -= item_data['quantity']
-                    inventory.save()
-                    
-                except Inventory.DoesNotExist:
-                    return Response({
-                        'error': f'Part {part.name} not available at this store'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Create order item
-                order_item = OrderItem.objects.create(
-                    order=order,
-                    part=part,
-                    quantity=item_data['quantity'],
-                    unit_price=part.unit_price
-                )
-                total_amount += order_item.get_total_price()
-            
-            # Create payment
-            payment = Payment.objects.create(
-                order=order,
-                payment_method=data['payment_method'],
-                amount=total_amount,
-                card_last_four_digit=data.get('card_last_four_digit', ''),
-                authentication_code=str(uuid.uuid4())
-            )
-            
-            # Create delivery record
-            delivery = Delivery.objects.create(
-                order=order,
-                tracking_number=f"TRK{order.order_id}{timezone.now().strftime('%Y%m%d%H%M')}",
-                delivery_status='PREPARING'
-            )
-            
-            order.status = 'PROCESSING'
-            order.save()
-        
-        order_serializer = CustomerOrderSerializer(order)
-        return Response(order_serializer.data, status=status.HTTP_201_CREATED)
-    
+        # ... your existing create_order code ...
+        # (leave this as-is)
+        pass
+
     @action(detail=False, methods=['get'])
-    def by_customer(self, request):
-        """Get orders for specific customer"""
-        customer_id = request.query_params.get('customer_id')
-        if customer_id:
-            orders = self.queryset.filter(customer_id=customer_id).order_by('-order_date')
-            serializer = self.get_serializer(orders, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'customer_id parameter required'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
+    def by_store(self, request):
+        """
+        Get orders for a specific store (for employees).
+        Optional ?status= filter (e.g. PROCESSING, PENDING).
+        """
+        store_id = request.query_params.get('store_id')
+        status_filter = request.query_params.get('status')
+
+        if not store_id:
+            return Response(
+                {'error': 'store_id parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        orders = self.queryset.filter(store_id=store_id).order_by('-order_date')
+
+        if status_filter:
+            orders = orders.filter(status=status_filter)
+
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """
+        Update order + delivery status (used by employees to process orders).
+        Expects JSON like:
+        {
+            "status": "SHIPPED" or "DELIVERED",
+            "delivery_status": "IN_TRANSIT" or "DELIVERED",
+            "employee_id": 3
+        }
+        """
+        order = self.get_object()
+        new_status = request.data.get('status')
+        delivery_status = request.data.get('delivery_status')
+        employee_id = request.data.get('employee_id')
+
+        # Validate order status
+        valid_order_statuses = {code for code, _ in CustomerOrder.STATUS_CHOICES}
+        if new_status and new_status not in valid_order_statuses:
+            return Response(
+                {'error': f'Invalid order status: {new_status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate / get delivery object
+        try:
+            delivery = order.delivery
+        except Delivery.DoesNotExist:
+            delivery = Delivery(order=order)
+
+        valid_delivery_statuses = {code for code, _ in Delivery.STATUS_CHOICES}
+        if delivery_status and delivery_status not in valid_delivery_statuses:
+            return Response(
+                {'error': f'Invalid delivery status: {delivery_status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Attach employee if provided
+        if employee_id:
+            try:
+                employee = Employee.objects.get(pk=employee_id)
+                delivery.employee = employee
+            except Employee.DoesNotExist:
+                return Response(
+                    {'error': f'Employee {employee_id} not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Apply status changes + dates
+        from django.utils import timezone
+
+        if new_status:
+            order.status = new_status
+
+        if delivery_status:
+            delivery.delivery_status = delivery_status
+
+        # Auto set dates based on transitions
+        today = timezone.now().date()
+        if new_status == 'SHIPPED' and not delivery.ship_date:
+            delivery.ship_date = today
+        if new_status == 'DELIVERED' and not delivery.delivery_date:
+            delivery.delivery_date = today
+
+        order.save()
+        delivery.save()
+
+        serializer = CustomerOrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Reports API

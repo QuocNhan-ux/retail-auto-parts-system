@@ -22,13 +22,156 @@
     <div id="emp-login-message" class="message"></div>
 </div>
 
+<!-- Employee dashboard: only visible after successful login -->
+<div id="employee-dashboard" style="display:none; margin-top: 2rem;">
+    <h2>Order Processing</h2>
+    <p id="emp-dashboard-intro"></p>
+
+    <table class="cart-table" style="width:100%; border-collapse: collapse; margin-top:1rem;">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="order-table-body">
+            <tr>
+                <td colspan="6" style="text-align:center;">Log in to view orders.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
 <script>
+let loggedInEmployee = null;
+
+function getCsrfToken() {
+    return (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
+}
+
+// Load orders for this employee's store
+async function loadOrdersForStore() {
+    if (!loggedInEmployee) return;
+
+    const tbody = document.getElementById('order-table-body');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading orders...</td></tr>';
+
+    try {
+        const response = await fetch(
+            `/api/customer-orders/by_store/?store_id=${loggedInEmployee.store_id}&status=PROCESSING`
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">
+                ${data.error || 'Failed to load orders.'}
+            </td></tr>`;
+            return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No orders to process.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        data.forEach(order => {
+            const tr = document.createElement('tr');
+
+            const total = (order.total_amount !== null && order.total_amount !== undefined)
+                ? Number(order.total_amount).toFixed(2)
+                : '0.00';
+
+            tr.innerHTML = `
+                <td>${order.order_id}</td>
+                <td>${order.customer_name}</td>
+                <td>${new Date(order.order_date).toLocaleString()}</td>
+                <td>${order.status}</td>
+                <td>$${total}</td>
+                <td>
+                    <button class="btn-small" data-action="ship" data-order-id="${order.order_id}">
+                        Mark Shipped
+                    </button>
+                    <button class="btn-small" data-action="deliver" data-order-id="${order.order_id}">
+                        Mark Delivered
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Unexpected error loading orders.</td></tr>';
+    }
+}
+
+// Handle status update button clicks
+document.getElementById('order-table-body').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn || !loggedInEmployee) return;
+
+    const orderId = btn.getAttribute('data-order-id');
+    const action = btn.getAttribute('data-action');
+
+    const statusMap = {
+        ship: {
+            status: 'SHIPPED',
+            delivery_status: 'IN_TRANSIT'
+        },
+        deliver: {
+            status: 'DELIVERED',
+            delivery_status: 'DELIVERED'
+        }
+    };
+
+    const mapping = statusMap[action];
+    if (!mapping) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+
+    try {
+        const response = await fetch(`/api/customer-orders/${orderId}/update_status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                status: mapping.status,
+                delivery_status: mapping.delivery_status,
+                employee_id: loggedInEmployee.employee_id
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || 'Failed to update order status.');
+        } else {
+            // Reload orders so the table reflects new status
+            await loadOrdersForStore();
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Unexpected error updating order.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = (action === 'ship') ? 'Mark Shipped' : 'Mark Delivered';
+    }
+});
+
+// Login form handler
 document.getElementById('employee-login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const username = (document.getElementById('emp-username').value || '').trim();
     const password = document.getElementById('emp-password').value;
-
     const message = document.getElementById('emp-login-message');
     message.textContent = 'Signing in...';
 
@@ -37,7 +180,7 @@ document.getElementById('employee-login-form').addEventListener('submit', async 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1]
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ username, password })
         });
@@ -45,12 +188,29 @@ document.getElementById('employee-login-form').addEventListener('submit', async 
         const data = await response.json();
 
         if (response.ok && data.success) {
+            loggedInEmployee = {
+                employee_id: data.employee_id,
+                full_name: data.full_name,
+                role: data.role,
+                store_id: data.store_id
+            };
+
             message.textContent = `Welcome, ${data.full_name}! Role: ${data.role}`;
+            document.getElementById('employee-dashboard').style.display = 'block';
+            document.getElementById('emp-dashboard-intro').textContent =
+                `Viewing orders for store #${loggedInEmployee.store_id}.`;
+
+            // Load initial set of orders to process
+            await loadOrdersForStore();
         } else {
+            loggedInEmployee = null;
+            document.getElementById('employee-dashboard').style.display = 'none';
             message.textContent = data.error || 'Login failed. Please try again.';
         }
     } catch (err) {
         console.error(err);
+        loggedInEmployee = null;
+        document.getElementById('employee-dashboard').style.display = 'none';
         message.textContent = 'Unexpected error. Please try again later.';
     }
 });
