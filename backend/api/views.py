@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
@@ -36,6 +36,10 @@ def customer_login(request):
         try:
             customer = Customer.objects.get(username=username)
             if customer.check_password(password):
+                 # store in session
+                request.session['customer_id'] = customer.customer_id
+                request.session['customer_name'] = customer.full_name
+
                 return Response({
                     'success': True,
                     'customer_id': customer.customer_id,
@@ -50,6 +54,11 @@ def customer_login(request):
                           status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+def customer_logout(request):
+    """Log out customer and clear session"""
+    request.session.flush()  # clears all session data and cookie
+    return Response({'success': True})
 
 @api_view(['POST'])
 def employee_login(request):
@@ -411,3 +420,57 @@ def employee_performance_report(request):
     )
     
     return Response({'performance': list(performance)})
+
+def _get_cart(request):
+    """Internal helper to get or init cart from session"""
+    cart = request.session.get('cart', {})
+    if not isinstance(cart, dict):
+        cart = {}
+    request.session['cart'] = cart
+    return cart
+
+
+@api_view(['POST'])
+def cart_add(request):
+    """Add item to cart in session"""
+    # make sure the user is logged in
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return Response({'error': 'Login required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    part_id = str(request.data.get('part_id'))
+    quantity = int(request.data.get('quantity', 1))
+
+    if not part_id:
+        return Response({'error': 'part_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cart = _get_cart(request)
+    cart[part_id] = cart.get(part_id, 0) + quantity
+    request.session['cart'] = cart
+
+    cart_count = sum(cart.values())
+    return Response({'success': True, 'cart_count': cart_count})
+
+
+@api_view(['GET'])
+def cart_summary(request):
+    """Return cart count (and optional details) from session"""
+    cart = _get_cart(request)
+    cart_count = sum(cart.values())
+
+    return Response({
+        'cart_count': cart_count,
+        'items': cart  # just ids + qty for now
+    })
+
+
+@api_view(['POST'])
+def cart_clear(request):
+    """Clear cart"""
+    request.session['cart'] = {}
+    return Response({'success': True})
+
+def cart_page(request):
+    if 'customer_id' not in request.session:
+        return redirect('customer-login-page')
+    return render(request, 'customer/cart.html')
