@@ -49,92 +49,95 @@
             <div class="product-image">[Image]</div>
             <h3>Brake Pad Set</h3>
             <p class="price">$49.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-100245" data-quantity="1">Add to Cart</button>
         </div>
         <div class="product-card">
             <div class="product-image">[Image]</div>
             <h3>Oil Filter</h3>
             <p class="price">$12.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-200112" data-quantity="1">Add to Cart</button>
         </div>
         <div class="product-card">
             <div class="product-image">[Image]</div>
             <h3>Air Filter</h3>
             <p class="price">$18.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-200318" data-quantity="1">Add to Cart</button>
         </div>
         <div class="product-card">
             <div class="product-image">[Image]</div>
             <h3>Spark Plugs (Set of 4)</h3>
             <p class="price">$24.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-300457" data-quantity="1">Add to Cart</button>
         </div>
         <div class="product-card">
             <div class="product-image">[Image]</div>
             <h3>Battery</h3>
             <p class="price">$259.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-400982" data-quantity="1">Add to Cart</button>
         </div>
         <div class="product-card">
             <div class="product-image">[Image]</div>
             <h3>Wiper Blade</h3>
             <p class="price">$26.99</p>
-            <button class="add-to-cart" data-part-id="PART_ID" data-quantity="1">
-                Add to Cart
-            </button>
+            <button class="add-to-cart" data-part-id="AP-500721" data-quantity="1">Add to Cart</button>
         </div>
     </div>
 </div>
 <script>
     (function () {
-        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
-        const cartLink = document.getElementById('nav-cart');
+        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ""])[1];
+        const cartLink = document.getElementById("nav-cart");
     
         function updateCartNav(count) {
-            if (cartLink && typeof count === 'number') {
+            if (cartLink && typeof count === "number") {
                 cartLink.textContent = `Cart (${count})`;
             }
         }
     
-        document.querySelectorAll('.add-to-cart').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const partId = btn.getAttribute('data-part-id');
-                const quantity = parseInt(btn.getAttribute('data-quantity') || '1', 10);
+        async function addToCart(button) {
+            const card = button.closest(".product-card");
+            const partId = button.dataset.partId;
+            const quantity = parseInt(button.dataset.quantity || "1", 10);
     
-                try {
-                    const res = await fetch('/api/cart/add/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken,
-                        },
-                        body: JSON.stringify({ part_id: partId, quantity: quantity }),
-                    });
+            // Extract name + price from card
+            const name = card.querySelector("h3").textContent.trim();
+            const priceText = card.querySelector(".price").textContent.replace("$", "").trim();
+            const unitPrice = parseFloat(priceText) || 0;
     
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        alert('Added to cart!');
-                        updateCartNav(data.cart_count);
-                    } else if (res.status === 401) {
-                        alert('Please sign in before adding items to your cart.');
-                        window.location.href = "{% url 'customer-login-page' %}";
-                    } else {
-                        alert(data.error || 'Could not add to cart.');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('Unexpected error adding to cart.');
+            try {
+                const res = await fetch("/api/cart/add/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrftoken
+                    },
+                    body: JSON.stringify({
+                        part_id: partId,
+                        quantity: quantity,
+                        name: name,
+                        unit_price: unitPrice
+                    })
+                });
+    
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert("Added to cart!");
+                    updateCartNav(data.cart_count);
+                } else if (res.status === 401) {
+                    alert("Please sign in before adding items.");
+                    window.location.href = "{% url 'customer-login-page' %}";
+                } else {
+                    alert(data.error || "Could not add to cart.");
                 }
+            } catch (err) {
+                console.error(err);
+                alert("Unexpected error adding to cart.");
+            }
+        }
+    
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".add-to-cart").forEach(btn => {
+                btn.addEventListener("click", () => addToCart(btn));
             });
         });
     })();

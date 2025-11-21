@@ -422,78 +422,157 @@ def employee_performance_report(request):
     
     return Response({'performance': list(performance)})
 
+# Cart helpers & API views
 def _get_cart(request):
-    """Internal helper to get or init cart from session"""
-    cart = request.session.get('cart', {})
+    """
+    Internal helper to get or init cart from session.
+
+    Cart shape in session:
+    {
+        "AP-100245": {
+            "name": "Brake Pad Set",
+            "unit_price": 49.99,
+            "quantity": 2,
+        },
+        ...
+    }
+    """
+    cart = request.session.get("cart", {})
     if not isinstance(cart, dict):
         cart = {}
-    request.session['cart'] = cart
-    return cart
 
+    normalised = {}
 
-@api_view(['POST'])
-def cart_add(request):
-    """Add item to cart in session"""
-    # make sure the user is logged in
-    customer_id = request.session.get('customer_id')
-    if not customer_id:
-        return Response({'error': 'Login required'}, status=status.HTTP_401_UNAUTHORIZED)
+    for pid, item in cart.items():
+        # Legacy scalar value (probably just a quantity)
+        if not isinstance(item, dict):
+            try:
+                qty = int(item)
+            except (TypeError, ValueError):
+                qty = 1
 
-    part_id = str(request.data.get('part_id'))
-    quantity = int(request.data.get('quantity', 1))
-
-    if not part_id:
-        return Response({'error': 'part_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    cart = _get_cart(request)
-    cart[part_id] = cart.get(part_id, 0) + quantity
-    request.session['cart'] = cart
-
-    cart_count = sum(cart.values())
-    return Response({'success': True, 'cart_count': cart_count})
-
-
-@api_view(['GET'])
-def cart_summary(request):
-    """Return cart contents with details and total"""
-    cart = _get_cart(request)
-    items = []
-    total_amount = Decimal(00.0)
-
-    for part_id_str, qty in cart.items():
-        try:
-            part_id = int(part_id_str)
-            part = AutoPart.objects.get(pk=part_id)
-        except (ValueError, AutoPart.DoesNotExist):
+            normalised[pid] = {
+                "name": f"Item {pid}",
+                "unit_price": 0.0,
+                "quantity": max(1, qty),
+            }
             continue
 
-        quantity = int(qty)
-        subtotal = part.unit_price * quantity
-        total_amount += subtotal
+        # Proper dict – make sure required keys exist and are sane
+        name = item.get("name") or f"Item {pid}"
+        try:
+            unit_price = float(item.get("unit_price", 0))
+        except (TypeError, ValueError):
+            unit_price = 0.0
+
+        try:
+            qty = int(item.get("quantity", 1))
+        except (TypeError, ValueError):
+            qty = 1
+
+        normalised[pid] = {
+            "name": name,
+            "unit_price": unit_price,
+            "quantity": max(1, qty),
+        }
+
+    request.session["cart"] = normalised
+    request.session.modified = True
+    return normalised
+
+
+@api_view(["POST"])
+def cart_add(request):
+    """Add item to cart in session."""
+    # require logged-in customer
+    if not request.session.get("customer_id"):
+        return Response({"error": "Login required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    data = request.data
+    part_id = str(data.get("part_id") or "").strip()
+    if not part_id:
+        return Response({"error": "part_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        quantity = int(data.get("quantity", 1))
+    except (TypeError, ValueError):
+        quantity = 1
+    quantity = max(1, quantity)
+
+    name = (data.get("name") or f"Item {part_id}").strip()
+    try:
+        unit_price = float(data.get("unit_price", 0))
+    except (TypeError, ValueError):
+        unit_price = 0.0
+
+    cart = _get_cart(request)
+    item = cart.get(part_id, {"name": name, "unit_price": unit_price, "quantity": 0})
+
+    # always keep latest name/price from frontend
+    item["name"] = name
+    item["unit_price"] = unit_price
+    item["quantity"] = int(item.get("quantity", 0)) + quantity
+
+    cart[part_id] = item
+    request.session["cart"] = cart
+    request.session.modified = True
+
+    cart_count = sum(i["quantity"] for i in cart.values())
+    return Response({"success": True, "cart_count": cart_count})
+
+
+@api_view(["GET"])
+def cart_summary(request):
+    """Return cart items, totals, and count."""
+    cart = _get_cart(request)
+
+    items = []
+    total = 0.0
+
+    for part_id, item in cart.items():
+        qty = int(item.get("quantity", 0))
+        price = float(item.get("unit_price", 0))
+        line_total = qty * price
+        total += line_total
 
         items.append({
-            'part_id': part.part_id,
-            'name': part.name,
-            'unit_price': str(part.unit_price),
-            'quantity': quantity,
-            'subtotal': str(subtotal),
+            "part_id": part_id,
+            "name": item.get("name", f"Item {part_id}"),
+            "unit_price": price,
+            "quantity": qty,
+            "line_total": line_total,
         })
 
-    cart_count = sum(i['quantity'] for i in items)
-
+    cart_count = sum(i["quantity"] for i in items)
 
     return Response({
-        'cart_count': cart_count,
-        'items': items,
-        'total_amount': str(total_amount),
+        "cart_count": cart_count,
+        "items": items,
+        "total": total,
     })
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def cart_clear(request):
-    """Clear cart"""
-    request.session['cart'] = {}
-    return Response({'success': True})
+    """Clear the cart completely."""
+    request.session["cart"] = {}
+    request.session.modified = True
+    return Response({"success": True, "cart_count": 0})
+
+
+@api_view(["POST"])
+def cart_remove(request):
+    """Remove a single item from the cart."""
+    part_id = str(request.data.get("part_id") or "").strip()
+    cart = _get_cart(request)
+
+    if part_id in cart:
+        del cart[part_id]
+        request.session["cart"] = cart
+        request.session.modified = True
+
+    cart_count = sum(i["quantity"] for i in cart.values())
+    return Response({"success": True, "cart_count": cart_count})
 
 def cart_page(request):
     if 'customer_id' not in request.session:

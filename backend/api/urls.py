@@ -12,7 +12,7 @@ router.register(r'purchase-orders', views.PurchaseOrderViewSet, basename='purcha
 router.register(r'customer-orders', views.CustomerOrderViewSet, basename='customerorder')
 
 urlpatterns = [
-    
+
     # Include router URLs
     path('', include(router.urls)),
     
@@ -31,4 +31,5 @@ urlpatterns = [
     path('cart/add/', views.cart_add, name='cart-add-api'),
     path('cart/summary/', views.cart_summary, name='cart-summary-api'),
     path('cart/clear/', views.cart_clear, name='cart-clear-api'),
+    path('cart/remove/', views.cart_remove, name='cart-remove-api'),
 ]

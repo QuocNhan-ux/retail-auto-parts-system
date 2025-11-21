@@ -1,28 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Your Cart{% endblock %}
+
+{% block title %}Your Cart - Autoparts System{% endblock %}
 
 {% block content %}
-<section class="cart-page">
+<div class="cart-page">
     <h1>Your Cart</h1>
+    <p id="cart-message"></p>
 
-    <div id="cart-empty" style="display:none;">
-        <p>Your cart is empty.</p>
-    </div>
-
-    <table id="cart-table" style="width:100%; border-collapse: collapse; display:none;">
+    <table id="cart-table" class="cart-table" style="width: 100%; border-collapse: collapse; display: none;">
         <thead>
             <tr>
-                <th style="text-align:left;">Item</th>
+                <th style="text-align: left;">Item</th>
                 <th>Price</th>
                 <th>Qty</th>
-                <th>Subtotal</th>
+                <th>Line Total</th>
+                <th></th>
             </tr>
         </thead>
         <tbody id="cart-body"></tbody>
         <tfoot>
             <tr>
-                <td colspan="3" style="text-align:right; font-weight:bold;">Total:</td>
-                <td id="cart-total" style="font-weight:bold;"></td>
+                <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                <td id="cart-total">$0.00</td>
+                <td></td>
             </tr>
         </tfoot>
     </table>
@@ -32,137 +32,150 @@
     <h2>Checkout</h2>
     <form id="checkout-form">
         <label>
-            Payment Method:
-            <select name="payment_method" required>
+            Payment Method
+            <select name="payment_method">
                 <option value="CREDIT_CARD">Credit Card</option>
                 <option value="DEBIT_CARD">Debit Card</option>
                 <option value="PAYPAL">PayPal</option>
             </select>
         </label>
-        <br><br>
+        <br>
         <label>
-            Card Last 4 Digits:
-            <input type="text" name="card_last_four_digit" maxlength="4" pattern="\\d{4}" required>
+            Card Last 4 Digits
+            <input type="text" name="card_last4" maxlength="4" />
         </label>
         <br><br>
-        <button type="submit" class="btn-primary">Confirm & Pay</button>
+        <button type="submit">Place Order</button>
+        <button type="button" id="btn-clear-cart">Clear Cart</button>
     </form>
-
-    <p id="checkout-message"></p>
-</section>
+</div>
 
 <script>
 (function () {
-    const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1];
-    const cartBody = document.getElementById('cart-body');
-    const cartTable = document.getElementById('cart-table');
-    const cartEmpty = document.getElementById('cart-empty');
-    const cartTotal = document.getElementById('cart-total');
-    const checkoutForm = document.getElementById('checkout-form');
-    const checkoutMsg = document.getElementById('checkout-message');
-    const cartLink = document.getElementById('nav-cart');
+    const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ""])[1];
 
-    let currentItems = []; // [{ part_id, name, unit_price, quantity, subtotal }]
+    const cartTable = document.getElementById("cart-table");
+    const cartBody = document.getElementById("cart-body");
+    const cartTotalEl = document.getElementById("cart-total");
+    const cartMessage = document.getElementById("cart-message");
+    const cartLink = document.getElementById("nav-cart");
 
-    async function loadCart() {
-        const res = await fetch('/api/cart/summary/');
-        const data = await res.json();
-
-        currentItems = data.items || [];
-
-        if (!currentItems.length) {
-            cartTable.style.display = 'none';
-            cartEmpty.style.display = 'block';
-            checkoutForm.style.display = 'none';
-        } else {
-            cartTable.style.display = 'table';
-            cartEmpty.style.display = 'none';
-            checkoutForm.style.display = 'block';
-        }
-
-        cartBody.innerHTML = '';
-        currentItems.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${item.name}</td>
-                <td style="text-align:center;">$${item.unit_price}</td>
-                <td style="text-align:center;">${item.quantity}</td>
-                <td style="text-align:center;">$${item.subtotal}</td>
-            `;
-            cartBody.appendChild(tr);
-        });
-
-        cartTotal.textContent = `$${data.total_amount || '0.00'}`;
-
-        if (cartLink && typeof data.cart_count === 'number') {
-            cartLink.textContent = `Cart (${data.cart_count})`;
+    function updateNav(count) {
+        if (cartLink && typeof count === "number") {
+            cartLink.textContent = `Cart (${count})`;
         }
     }
 
-    // Handle checkout
-    checkoutForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    function renderCart(data) {
+        const items = data.items || [];
+        const count = data.cart_count || 0;
+        const total = data.total || 0;
 
-        if (!currentItems.length) {
-            checkoutMsg.textContent = 'Your cart is empty.';
+        updateNav(count);
+
+        if (!items.length) {
+            cartTable.style.display = "none";
+            cartMessage.textContent = "Your cart is empty.";
+            cartTotalEl.textContent = "$0.00";
             return;
         }
 
-        const customerId = localStorage.getItem('customerId');
-        if (!customerId) {
-            checkoutMsg.textContent = 'Please sign in before checking out.';
-            return;
-        }
+        cartTable.style.display = "table";
+        cartMessage.textContent = "";
 
-        const formData = new FormData(checkoutForm);
-        const payment_method = formData.get('payment_method');
-        const card_last_four_digit = formData.get('card_last_four_digit');
+        cartBody.innerHTML = "";
+        items.forEach(item => {
+            const tr = document.createElement("tr");
 
-        const payload = {
-            customer_id: parseInt(customerId, 10),
-            store_id: 1,  // change if you support multiple stores
-            items: currentItems.map(i => ({
-                part_id: i.part_id,
-                quantity: i.quantity
-            })),
-            payment_method,
-            card_last_four_digit,
-        };
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td style="text-align: center;">$${item.unit_price.toFixed(2)}</td>
+                <td style="text-align: center;">${item.quantity}</td>
+                <td style="text-align: center;">$${item.line_total.toFixed(2)}</td>
+                <td style="text-align: center;">
+                    <button type="button" class="btn-remove-item" data-part-id="${item.part_id}">
+                        Remove
+                    </button>
+                </td>
+            `;
 
-        checkoutMsg.textContent = 'Processing payment...';
+            cartBody.appendChild(tr);
+        });
 
+        cartTotalEl.textContent = `$${total.toFixed(2)}`;
+    }
+
+    async function loadCart() {
         try {
-            const res = await fetch('/api/orders/create_order/', {
-                method: 'POST',
+            const res = await fetch("/api/cart/summary/");
+            if (!res.ok) throw new Error("bad status");
+            const data = await res.json();
+            renderCart(data);
+        } catch (err) {
+            console.error(err);
+            cartMessage.textContent = "Could not load cart. Please try again.";
+            cartTable.style.display = "none";
+        }
+    }
+
+    async function clearCart() {
+        try {
+            const res = await fetch("/api/cart/clear/", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken,
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
                 },
-                body: JSON.stringify(payload),
+                body: "{}"
             });
             const data = await res.json();
-
-            if (res.ok) {
-                checkoutMsg.textContent = 'Order placed successfully! Thank you.';
-                // clear cart on server
-                await fetch('/api/cart/clear/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrftoken,
-                        'Content-Type': 'application/json',
-                    },
-                    body: '{}',
-                });
-                await loadCart();
-            } else {
-                checkoutMsg.textContent = data.error || 'Checkout failed. Please try again.';
+            if (res.ok && data.success) {
+                renderCart({ items: [], cart_count: 0, total: 0 });
             }
         } catch (err) {
             console.error(err);
-            checkoutMsg.textContent = 'Unexpected error. Please try again.';
+        }
+    }
+
+    async function removeItem(partId) {
+        try {
+            const res = await fetch("/api/cart/remove/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({ part_id: partId })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                // reload cart from backend to get fresh totals
+                await loadCart();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("btn-remove-item")) {
+            const partId = e.target.getAttribute("data-part-id");
+            removeItem(partId);
         }
     });
 
+    document.getElementById("btn-clear-cart").addEventListener("click", (e) => {
+        e.preventDefault();
+        clearCart();
+    });
+
+    document.getElementById("checkout-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        // You can plug this into your create_order API later.
+        alert("Checkout flow not fully wired yet, but cart + totals are working.");
+    });
+
+    // initial load
     loadCart();
 })();
 </script>
