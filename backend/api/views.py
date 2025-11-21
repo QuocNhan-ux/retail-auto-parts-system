@@ -7,6 +7,7 @@ from django.db.models import Q, Sum, Count, F
 from django.db import transaction
 from django.utils import timezone
 from datetime import datetime, timedelta
+from decimal import Decimal
 import uuid
 
 from .models import (
@@ -454,13 +455,37 @@ def cart_add(request):
 
 @api_view(['GET'])
 def cart_summary(request):
-    """Return cart count (and optional details) from session"""
+    """Return cart contents with details and total"""
     cart = _get_cart(request)
-    cart_count = sum(cart.values())
+    items = []
+    total_amount = Decimal(00.0)
+
+    for part_id_str, qty in cart.items():
+        try:
+            part_id = int(part_id_str)
+            part = AutoPart.objects.get(pk=part_id)
+        except (ValueError, AutoPart.DoesNotExist):
+            continue
+
+        quantity = int(qty)
+        subtotal = part.unit_price * quantity
+        total_amount += subtotal
+
+        items.append({
+            'part_id': part.part_id,
+            'name': part.name,
+            'unit_price': str(part.unit_price),
+            'quantity': quantity,
+            'subtotal': str(subtotal),
+        })
+
+    cart_count = sum(i['quantity'] for i in items)
+
 
     return Response({
         'cart_count': cart_count,
-        'items': cart  # just ids + qty for now
+        'items': items,
+        'total_amount': str(total_amount),
     })
 
 

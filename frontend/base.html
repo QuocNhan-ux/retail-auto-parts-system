@@ -16,6 +16,11 @@
                 <li><a href="/" class="active">Home</a></li>
                 <li><a href="/catalog/">Catalog</a></li>
                 <li><a href="#cart" style="background-color: #ff6600;">Cart (0)</a></li>
+                <li><a href="#shop">Shop Parts</a></li>
+                <li><a href="#contact">Contact</a></li>
+
+                <!-- Updated cart link -->
+                <li><a id="nav-cart" href="/cart/" style="background-color: #ff6600;">Cart (0)</a></li>
 
                 <!-- Sign in / Logout -->
                 <li><a id="nav-signin" href="{% url 'customer-login-page' %}">Sign in</a></li>
@@ -32,64 +37,62 @@
         <p><a href="#about">About Us</a></p>
     </footer>
 
+    <!-- Session Script -->
     <script>
-        (function () {
-            const name = localStorage.getItem('customerName');
-            const signinLink = document.getElementById('nav-signin');
-            const logoutLink = document.getElementById('nav-logout');
-            const cartLink = document.getElementById('nav-cart');
+    (function () {
+        const name = localStorage.getItem('customerName');
+        const signinLink = document.getElementById('nav-signin');
+        const logoutLink = document.getElementById('nav-logout');
+        const cartLink = document.getElementById('nav-cart');
 
-    // Navbar for logged-in user
-    if (name) {
-        if (signinLink) {
-            signinLink.textContent = `Hi, ${name}`;
-        }
-        if (logoutLink) {
-            logoutLink.style.display = 'inline-block';
-        }
-    }
-
-    // Load cart count from server
-    if (cartLink) {
-        fetch('/api/cart/summary/')
-            .then(res => res.ok ? res.json() : Promise.reject())
-            .then(data => {
-                if (typeof data.cart_count === 'number') {
-                    cartLink.textContent = `Cart (${data.cart_count})`;
-                }
-            })
-            .catch(() => {
-                // ignore errors for now
-            });
-    }
-
-    // Logout handler
-    if (logoutLink) {
-        logoutLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-
-            // Call logout API
-            try {
-                await fetch('/api/auth/customer/logout/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1],
-                        'Content-Type': 'application/json'
-                    },
-                    body: '{}'
-                });
-            } catch (err) {
-                console.error(err);
+        /* Show "Hi, Name" + Logout */
+        if (name) {
+            if (signinLink) {
+                signinLink.textContent = `Hi, ${name}`;
             }
+            if (logoutLink) {
+                logoutLink.style.display = 'inline-block';
+            }
+        }
 
-            // Clear client-side state
-            localStorage.removeItem('customerName');
-            localStorage.removeItem('customerId');
+        /* Load Cart Count on startup */
+        if (cartLink) {
+            fetch('/api/cart/summary/')
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(data => {
+                    if (typeof data.cart_count === 'number') {
+                        cartLink.textContent = `Cart (${data.cart_count})`;
+                    }
+                })
+                .catch(() => {});
+        }
 
-            // Go back to home & reload nav
-            window.location.href = '/';
-        });
-    }
+        /* Logout Handler */
+        if (logoutLink) {
+            logoutLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                try {
+                    await fetch('/api/auth/customer/logout/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [null, ''])[1],
+                            'Content-Type': 'application/json'
+                        },
+                        body: '{}'
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
+
+                // Clear browser state
+                localStorage.removeItem('customerName');
+                localStorage.removeItem('customerId');
+
+                // Reload
+                window.location.href = '/';
+            });
+        }
     })();
     </script>
 
