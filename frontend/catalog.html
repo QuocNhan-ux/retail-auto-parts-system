@@ -4,27 +4,91 @@
 
 {% block content %}
 <div class="catalog-container">
+    <!-- Sidebar Filters -->
     <aside class="filter-sidebar">
         <h3>Filter by Category</h3>
         <ul class="filter-list">
-            <li><a href="/catalog/" class="{% if not selected_category %}active{% endif %}">All Parts</a></li>
-            <li><a href="/catalog/?category=engine-parts" class="{% if selected_category == 'engine-parts' %}active{% endif %}">Engine Parts</a></li>
-            <li><a href="/catalog/?category=brakes" class="{% if selected_category == 'brakes' %}active{% endif %}">Brakes</a></li>
-            <li><a href="/catalog/?category=suspension" class="{% if selected_category == 'suspension' %}active{% endif %}">Suspension</a></li>
-            <li><a href="/catalog/?category=electrical" class="{% if selected_category == 'electrical' %}active{% endif %}">Electrical</a></li>
-            <li><a href="/catalog/?category=exhaust" class="{% if selected_category == 'exhaust' %}active{% endif %}">Exhaust</a></li>
-            <li><a href="/catalog/?category=body-parts" class="{% if selected_category == 'body-parts' %}active{% endif %}">Body Parts</a></li>
+            <li>
+                <a href="{% url 'catalog' %}"
+                   class="{% if not selected_category %}active{% endif %}">
+                    All Parts
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=engine-parts"
+                   class="{% if selected_category == 'engine-parts' %}active{% endif %}">
+                    Engine Parts
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=brakes"
+                   class="{% if selected_category == 'brakes' %}active{% endif %}">
+                    Brakes
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=suspension"
+                   class="{% if selected_category == 'suspension' %}active{% endif %}">
+                    Suspension
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=electrical"
+                   class="{% if selected_category == 'electrical' %}active{% endif %}">
+                    Electrical
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=exhaust"
+                   class="{% if selected_category == 'exhaust' %}active{% endif %}">
+                    Exhaust
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'catalog' %}?category=body-parts"
+                   class="{% if selected_category == 'body-parts' %}active{% endif %}">
+                    Body Parts
+                </a>
+            </li>
         </ul>
 
         <h3>Filter by Condition</h3>
         <ul class="filter-list">
-            <li><a href="/catalog/?category={{ selected_category }}" class="{% if not selected_condition %}active{% endif %}">All Conditions</a></li>
-            <li><a href="/catalog/?category={{ selected_category }}&condition=NEW" class="{% if selected_condition == 'NEW' %}active{% endif %}">New</a></li>
-            <li><a href="/catalog/?category={{ selected_category }}&condition=REBUILT" class="{% if selected_condition == 'REBUILT' %}active{% endif %}">Rebuilt</a></li>
-            <li><a href="/catalog/?category={{ selected_category }}&condition=USED" class="{% if selected_condition == 'USED' %}active{% endif %}">Used</a></li>
+            <!-- All conditions -->
+            <li>
+                <a href="{% url 'catalog' %}{% if selected_category %}?category={{ selected_category }}{% endif %}"
+                   class="{% if not selected_condition %}active{% endif %}">
+                    All Conditions
+                </a>
+            </li>
+
+            <!-- New -->
+            <li>
+                <a href="{% url 'catalog' %}?{% if selected_category %}category={{ selected_category }}&{% endif %}condition=NEW"
+                   class="{% if selected_condition == 'NEW' %}active{% endif %}">
+                    New
+                </a>
+            </li>
+
+            <!-- Rebuilt -->
+            <li>
+                <a href="{% url 'catalog' %}?{% if selected_category %}category={{ selected_category }}&{% endif %}condition=REBUILT"
+                   class="{% if selected_condition == 'REBUILT' %}active{% endif %}">
+                    Rebuilt
+                </a>
+            </li>
+
+            <!-- Used -->
+            <li>
+                <a href="{% url 'catalog' %}?{% if selected_category %}category={{ selected_category }}&{% endif %}condition=USED"
+                   class="{% if selected_condition == 'USED' %}active{% endif %}">
+                    Used
+                </a>
+            </li>
         </ul>
     </aside>
 
+    <!-- Main catalog content -->
     <main class="catalog-main">
         <div class="catalog-header">
             <h1>
@@ -39,17 +103,82 @@
 
         <div class="product-grid">
             {% for product in products %}
-            <div class="product-card">
-                <div class="product-image">[Image]</div>
-                <h3>{{ product.name }}</h3>
-                <p class="condition">{{ product.get_condition_display }}</p>
-                <p class="price">${{ product.unit_price }}</p>
-                <button class="add-to-cart" data-product-id="{{ product.part_id }}">Add to Cart</button>
-            </div>
+                <div class="product-card">
+                    <div class="product-image">[Image]</div>
+                    <h3>{{ product.name }}</h3>
+                    <p class="condition">{{ product.get_condition_display }}</p>
+                    <p class="price">${{ product.unit_price }}</p>
+                    <button class="add-to-cart"
+                            data-part-id="{{ product.part_id }}"
+                            data-quantity="1">
+                        Add to Cart
+                    </button>
+                </div>
             {% empty %}
-            <p>No products found matching your filters.</p>
+                <p>No products found matching your filters.</p>
             {% endfor %}
         </div>
     </main>
 </div>
+
+<script>
+(function () {
+    const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [null, ""])[1];
+    const cartLink = document.getElementById("nav-cart");
+
+    function updateCartNav(count) {
+        if (cartLink && typeof count === "number") {
+            cartLink.textContent = `Cart (${count})`;
+        }
+    }
+
+    async function addToCart(button) {
+        const partId = button.dataset.partId;
+        const quantity = parseInt(button.dataset.quantity || "1", 10);
+
+        // pull name/price from the card
+        const card = button.closest(".product-card");
+        const name = card.querySelector("h3").textContent.trim();
+        const priceText = card.querySelector(".price").textContent.replace("$", "").trim();
+        const unitPrice = parseFloat(priceText) || 0;
+
+        try {
+            const res = await fetch("/api/cart/add/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({
+                    part_id: partId,
+                    quantity: quantity,
+                    name: name,
+                    unit_price: unitPrice
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                alert("Added to cart!");
+                updateCartNav(data.cart_count);
+            } else if (res.status === 401) {
+                alert("Please sign in before adding items.");
+                window.location.href = "{% url 'customer-login-page' %}";
+            } else {
+                alert(data.error || "Could not add to cart.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Unexpected error adding to cart.");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".add-to-cart").forEach(btn => {
+            btn.addEventListener("click", () => addToCart(btn));
+        });
+    });
+})();
+</script>
 {% endblock %}
