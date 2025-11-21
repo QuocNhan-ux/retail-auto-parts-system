@@ -40,7 +40,15 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 
     ```bash
     python3 manage.py migrate
+    ```
+    
+    To gain Admin access: (Enter any username, email, password) 
+    login at http://127.0.0.1:8000/admin/
+    ```bash
     python3 manage.py createsuperuser
+    ```
+    
+    ```bash
     python3 manage.py runserver
     ```
 
