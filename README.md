@@ -33,7 +33,7 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 3. Install required packages
 
     ```bash
-    pip install -r -requirements.txt
+    pip install -r requirements.txt
     ```
 
 4. Apply Database Migrations and Deploy
