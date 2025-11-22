@@ -1,8 +1,7 @@
 # Retail Auto Parts System
 CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 
-The Project Reports file documented the team's progress throught the semester developing the 
-Retail Auto Parts System
+The Project Reports contain reports generated during each phase of the project, documenting the team's progress throughout the semester while developing the Retail Auto Parts System
 
 ## Tech Stack
 
