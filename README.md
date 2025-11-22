@@ -53,7 +53,7 @@ CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
     python3 manage.py runserver
     ```
 
-5. Access the App:
+5. Access Webpage:
 
 Home Page:
 http://127.0.0.1:8000/
@@ -66,4 +66,41 @@ http://127.0.0.1:8000/employee/login/
 
 Admin Panel (superuser only):
 http://127.0.0.1:8000/admin/
+
+
+## Getting Started
+
+1. Access the Django Admin Panel: 
+    ```bash
+    http://127.0.0.1:8000/admin/
+    ```
+2. Create a Customer Account
+
+Inside the admin dashboard:
+  1. Click Customers
+  2. Select Add Customer
+  3. Fill all required fields (name, email, username, password, etc.)
+  4. Save the new customer record.
+
+This account will be used to sign in on the customer-facing website.
+
+3. Log in as Customer
+
+After adding in some parts:
+1. Log out of the admin panel
+2. visit the customer login page:
+    ```bash
+    http://127.0.0.1:8000/customer/login/
+    ```
+3. sign in using the customer credentials you created
+
+5. Start using the application
+
+once logged in the customer can:
+- Browse and search auto parts
+- Filter by category or condition
+- View products detals
+- Add items to cart
+- Complete purchases
+- Review previous order history
 
