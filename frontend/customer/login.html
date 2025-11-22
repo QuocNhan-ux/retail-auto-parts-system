@@ -65,7 +65,7 @@ document.getElementById('customer-login-form').addEventListener('submit', async 
 
             message.textContent = `Welcome, ${data.full_name}! (Customer #${data.customer_id})`;
 
-            // Go to home page (or wherever you want)
+            // Go to home page
             setTimeout(() => {
                 window.location.href = '/';
             }, 700);
