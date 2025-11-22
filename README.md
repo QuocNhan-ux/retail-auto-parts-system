@@ -1,6 +1,9 @@
 # Retail Auto Parts System
 CSCE 4350 Database Systems — Team project (Retail Auto Parts System).
 
+The Project Reports file documented the team's progress throught the semester developing the 
+Retail Auto Parts System
+
 ## Tech Stack
 
 - **Backend**: Django 4.2, Django REST Framework, PostgreSQL
