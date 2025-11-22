@@ -13,7 +13,7 @@ router.register(r'customer-orders', views.CustomerOrderViewSet, basename='custom
 
 urlpatterns = [
 
-    # Include router URLs
+    # include router URLs
     path('', include(router.urls)),
     
     # Authentication endpoints

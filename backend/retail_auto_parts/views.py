@@ -31,7 +31,7 @@ def catalog_view(request):
     category_slug = (request.GET.get("category") or "").strip()
     condition = (request.GET.get("condition") or "").strip()
 
-    # Slug -> text we search for in AutoPart.category
+    # text search for in AutoPart.category
     CATEGORY_KEYWORDS = {
         "engine-parts": "Engine",
         "brakes": "Brake",
@@ -41,7 +41,7 @@ def catalog_view(request):
         "body-parts": "Body",
     }
 
-    # Slug -> nice display name for the page heading
+    # clean display name for the page heading
     CATEGORY_LABELS = {
         "engine-parts": "Engine Parts",
         "brakes": "Brakes",
@@ -114,7 +114,7 @@ def customer_history_page(request):
     if not customer_id:
         return redirect("customer_login_page")
 
-    # Load the logged-in customer's info
+    # Load logged-in customer's info
     try:
         customer = Customer.objects.get(pk=customer_id)
     except Customer.DoesNotExist:

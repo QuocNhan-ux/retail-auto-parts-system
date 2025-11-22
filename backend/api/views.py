@@ -59,7 +59,7 @@ def customer_login(request):
 @api_view(['POST'])
 def customer_logout(request):
     """Log out customer and clear session"""
-    request.session.flush()  # clears all session data and cookie
+    request.session.flush()  # clears session data and cookie
     return Response({'success': True})
 
 
@@ -75,7 +75,7 @@ def employee_login(request):
         try:
             employee = Employee.objects.get(username=username)
             if employee.check_password(password):
-                # ✅ store employee info in session
+                # store employee info in session
                 request.session['employee_id'] = employee.employee_id
                 request.session['employee_name'] = employee.full_name
                 request.session['employee_role'] = employee.role
