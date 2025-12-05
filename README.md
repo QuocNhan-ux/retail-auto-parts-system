@@ -15,7 +15,7 @@ The Project Reports contain reports generated during each phase of the project, 
 
    ```bash
    git clone <your-repo-url>
-   cd retail-auto-parts-system-main/backend
+   cd retail-auto-parts-system-main/
    ```
 
 2. Create a Python virtual enviroment
@@ -35,6 +35,7 @@ The Project Reports contain reports generated during each phase of the project, 
 3. Install required packages
 
     ```bash
+    cd backend
     pip install -r requirements.txt
     ```
 
